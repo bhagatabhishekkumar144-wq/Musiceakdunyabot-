@@ -1,0 +1,71 @@
+from pyrogram import Client, filters
+from pytgcalls import PyTgCalls
+from pytgcalls.types.input_stream import InputStream, AudioPiped
+import yt_dlp
+
+API_ID = 123456   # yaha apna api id daalo
+API_HASH = "your_api_hash"
+BOT_TOKEN = "8287971267:AAGKI85ge8fD2JbwVEoKE9FJfgL6uyjL1SI"
+
+app = Client("musicbot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+call = PyTgCalls(app)
+
+playlist = [
+    "https://www.youtube.com/watch?v=2Vv-BfVoq4g",
+    "https://www.youtube.com/watch?v=JGwWNGJdvx8"
+]
+
+queue = []
+
+def download_audio(url):
+    ydl_opts = {
+        'format': 'bestaudio',
+        'outtmpl': 'song.%(ext)s',
+        'quiet': True
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        return "song.mp3"
+
+@app.on_message(filters.command("play"))
+async def play(_, message):
+    chat_id = message.chat.id
+    query = " ".join(message.command[1:])
+
+    if not query:
+        await message.reply("Song naam do ❌")
+        return
+
+    url = f"ytsearch:{query}"
+    file = download_audio(url)
+
+    await call.join_group_call(
+        chat_id,
+        InputStream(
+            AudioPiped(file)
+        )
+    )
+
+    await message.reply("🎵 Song start ho gaya!")
+
+@app.on_message(filters.command("auto"))
+async def auto(_, message):
+    chat_id = message.chat.id
+    
+    for url in playlist:
+        file = download_audio(url)
+        await call.join_group_call(
+            chat_id,
+            InputStream(AudioPiped(file))
+        )
+
+    await message.reply("🔥 Auto playlist start!")
+
+@app.on_message(filters.command("stop"))
+async def stop(_, message):
+    await call.leave_group_call(message.chat.id)
+    await message.reply("⛔ Music band ho gaya")
+
+app.start()
+call.start()
+print("Bot chal raha hai 😎")
